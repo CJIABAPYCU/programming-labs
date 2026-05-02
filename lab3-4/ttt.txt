@@ -1,0 +1,2 @@
+mvn -q clean package
+java -cp target/classes Main
