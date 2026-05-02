@@ -1,0 +1,360 @@
+@startuml
+title UML-диаграмма всей лабораторной работы №5
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+hide empty members
+
+interface "Comparable<Organization>" as ComparableOrganization
+interface "Comparable<Coordinates>" as ComparableCoordinates
+class Exception
+
+package "model" {
+    interface Validatable {
+        +validate() : boolean
+    }
+
+    enum OrganizationType {
+        TRUST
+        PRIVATE_LIMITED_COMPANY
+        OPEN_JOINT_STOCK_COMPANY
+    }
+
+    class Coordinates {
+        -x : double
+        -y : float
+        +getX() : double
+        +getY() : float
+        +validate() : boolean
+        +compareTo(other : Coordinates) : int
+    }
+
+    class Location {
+        -x : Integer
+        -y : Double
+        -name : String
+        +getX() : Integer
+        +getY() : Double
+        +getName() : String
+        +validate() : boolean
+    }
+
+    class Address {
+        -street : String
+        -town : Location
+        +getStreet() : String
+        +getTown() : Location
+        +validate() : boolean
+        +toSortableString() : String
+    }
+
+    class Organization {
+        -id : int
+        -name : String
+        -coordinates : Coordinates
+        -creationDate : LocalDateTime
+        -annualTurnover : long
+        -employeesCount : Long
+        -type : OrganizationType
+        -officialAddress : Address
+        +getId() : int
+        +getName() : String
+        +getCoordinates() : Coordinates
+        +getCreationDate() : LocalDateTime
+        +getAnnualTurnover() : long
+        +getEmployeesCount() : Long
+        +getType() : OrganizationType
+        +getOfficialAddress() : Address
+        +validate() : boolean
+        +compareTo(other : Organization) : int
+    }
+}
+
+package "console" {
+    interface TextIO {
+        +print(obj : Object) : void
+        +println(obj : Object) : void
+        +printError(obj : Object) : void
+        +readLine() : String
+        +hasNextLine() : boolean
+        +prompt() : void
+        +pushInput(scanner : Scanner) : void
+        +popInput() : void
+    }
+
+    class TerminalConsole {
+        -PROMPT : String
+        -defaultScanner : Scanner
+        -scannerStack : Deque<Scanner>
+        -activeScanner : Scanner
+    }
+
+    class InputAbortException {
+        +InputAbortException(message : String)
+    }
+
+    class OrganizationReader {
+        -console : TextIO
+        +readNew(id : int) : Organization
+        +readForUpdate(id : int, creationDate : LocalDateTime) : Organization
+    }
+}
+
+package "io" {
+    class EnvConfig <<utility>> {
+        +getFileName() : String
+        +getFileName(key : String) : String
+    }
+
+    class OrganizationCsvStorage {
+        -DELIMITER : char
+        -FIELD_COUNT : int
+        -DATE_FORMATTER : DateTimeFormatter
+        -console : TextIO
+        +load(fileName : String) : List<Organization>
+        +save(fileName : String, collection : Iterable<Organization>) : void
+    }
+}
+
+package "core" {
+    class IdProvider {
+        -currentId : int
+        +sync(collection : Collection<Organization>) : void
+        +nextId() : int
+    }
+
+    class OrganizationRepository {
+        -collection : ArrayDeque<Organization>
+        -console : TextIO
+        -initTime : LocalDateTime
+        -lastSaveTime : LocalDateTime
+        +load(data : Iterable<Organization>) : void
+        +size() : int
+        +initTime() : LocalDateTime
+        +lastSaveTime() : LocalDateTime
+        +markSavedNow() : void
+        +typeName() : String
+        +list() : List<Organization>
+        +items() : Iterable<Organization>
+        +add(organization : Organization) : boolean
+        +update(organization : Organization) : boolean
+        +deleteById(id : long) : Organization
+        +clear() : void
+        +first() : Organization
+        +removeFirst() : Organization
+        +findById(id : long) : Organization
+    }
+
+    class ApplicationContext {
+        -console : TextIO
+        -repository : OrganizationRepository
+        -storage : OrganizationCsvStorage
+        -idProvider : IdProvider
+        -reader : OrganizationReader
+        -fileName : String
+        -dispatcher : CommandDispatcher
+        -scriptExecutor : ScriptExecutor
+    }
+}
+
+package "commands" {
+    interface CommandAction {
+        +keyword() : String
+        +summary() : String
+        +run(args : String, context : ApplicationContext) : CommandOutcome
+    }
+
+    class CommandOutcome {
+        -success : boolean
+        -message : String
+        -shouldExit : boolean
+        +isOk() : boolean
+        +message() : String
+        +shouldExit() : boolean
+    }
+
+    class CommandDispatcher {
+        -HISTORY_LIMIT : int
+        -commands : Map<String, CommandAction>
+        -history : Deque<String>
+        +register(command : CommandAction) : void
+        +dispatch(name : String, args : String, context : ApplicationContext) : CommandOutcome
+        +commands() : Map<String, CommandAction>
+        +history() : List<String>
+    }
+
+    package "impl" {
+        class Add
+        class Clear
+        class ExecuteScript
+        class Exit
+        class FilterContainsName
+        class Head
+        class Help
+        class History
+        class Info
+        class MaxByCoordinates
+        class PrintOfficialAddressDescending
+        class RemoveById
+        class RemoveHead
+        class Save
+        class Show
+        class Update
+    }
+}
+
+package "runner" {
+    class CliRunner {
+        -console : TextIO
+        -dispatcher : CommandDispatcher
+        -context : ApplicationContext
+        -shouldExit : boolean
+        +run() : void
+        +runLine(line : String) : CommandOutcome
+    }
+
+    class ScriptExecutor {
+        -console : TextIO
+        -runner : CliRunner
+        +execute(fileName : String) : CommandOutcome
+    }
+}
+
+class Main {
+    +main(args : String[]) : void
+}
+
+Validatable <|.. Organization
+Validatable <|.. Coordinates
+Validatable <|.. Address
+Validatable <|.. Location
+
+ComparableOrganization <|.. Organization
+ComparableCoordinates <|.. Coordinates
+
+TextIO <|.. TerminalConsole
+Exception <|-- InputAbortException
+CommandAction <|.. Add
+CommandAction <|.. Clear
+CommandAction <|.. ExecuteScript
+CommandAction <|.. Exit
+CommandAction <|.. FilterContainsName
+CommandAction <|.. Head
+CommandAction <|.. Help
+CommandAction <|.. History
+CommandAction <|.. Info
+CommandAction <|.. MaxByCoordinates
+CommandAction <|.. PrintOfficialAddressDescending
+CommandAction <|.. RemoveById
+CommandAction <|.. RemoveHead
+CommandAction <|.. Save
+CommandAction <|.. Show
+CommandAction <|.. Update
+
+Organization *-- Coordinates
+Organization *-- Address
+Organization --> OrganizationType
+Address *-- Location
+
+OrganizationReader --> TextIO
+OrganizationReader ..> Organization
+OrganizationReader ..> Coordinates
+OrganizationReader ..> Address
+OrganizationReader ..> Location
+OrganizationReader ..> OrganizationType
+OrganizationReader ..> InputAbortException
+
+OrganizationCsvStorage --> TextIO
+OrganizationCsvStorage ..> Organization
+OrganizationCsvStorage ..> Coordinates
+OrganizationCsvStorage ..> Address
+OrganizationCsvStorage ..> Location
+OrganizationCsvStorage ..> OrganizationType
+
+OrganizationRepository --> TextIO
+OrganizationRepository *-- "0..*" Organization
+IdProvider ..> Organization
+
+ApplicationContext o-- TextIO
+ApplicationContext o-- OrganizationRepository
+ApplicationContext o-- OrganizationCsvStorage
+ApplicationContext o-- IdProvider
+ApplicationContext o-- OrganizationReader
+ApplicationContext o-- CommandDispatcher
+ApplicationContext o-- ScriptExecutor
+
+CommandDispatcher o-- "0..*" CommandAction
+CommandDispatcher ..> CommandOutcome
+CommandDispatcher ..> ApplicationContext
+
+CliRunner --> TextIO
+CliRunner --> CommandDispatcher
+CliRunner --> ApplicationContext
+CliRunner ..> CommandOutcome
+
+ScriptExecutor --> TextIO
+ScriptExecutor --> CliRunner
+ScriptExecutor ..> CommandOutcome
+
+Add ..> ApplicationContext
+Clear ..> ApplicationContext
+ExecuteScript ..> ApplicationContext
+Exit ..> ApplicationContext
+FilterContainsName ..> ApplicationContext
+Head ..> ApplicationContext
+Help ..> ApplicationContext
+History ..> ApplicationContext
+Info ..> ApplicationContext
+MaxByCoordinates ..> ApplicationContext
+PrintOfficialAddressDescending ..> ApplicationContext
+RemoveById ..> ApplicationContext
+RemoveHead ..> ApplicationContext
+Save ..> ApplicationContext
+Show ..> ApplicationContext
+Update ..> ApplicationContext
+
+Add ..> CommandOutcome
+Clear ..> CommandOutcome
+ExecuteScript ..> CommandOutcome
+Exit ..> CommandOutcome
+FilterContainsName ..> CommandOutcome
+Head ..> CommandOutcome
+Help ..> CommandOutcome
+History ..> CommandOutcome
+Info ..> CommandOutcome
+MaxByCoordinates ..> CommandOutcome
+PrintOfficialAddressDescending ..> CommandOutcome
+RemoveById ..> CommandOutcome
+RemoveHead ..> CommandOutcome
+Save ..> CommandOutcome
+Show ..> CommandOutcome
+Update ..> CommandOutcome
+
+Main ..> EnvConfig
+Main ..> TerminalConsole
+Main ..> OrganizationCsvStorage
+Main ..> OrganizationRepository
+Main ..> IdProvider
+Main ..> OrganizationReader
+Main ..> ApplicationContext
+Main ..> CommandDispatcher
+Main ..> CliRunner
+Main ..> ScriptExecutor
+Main ..> Add
+Main ..> Clear
+Main ..> ExecuteScript
+Main ..> Exit
+Main ..> FilterContainsName
+Main ..> Head
+Main ..> Help
+Main ..> History
+Main ..> Info
+Main ..> MaxByCoordinates
+Main ..> PrintOfficialAddressDescending
+Main ..> RemoveById
+Main ..> RemoveHead
+Main ..> Save
+Main ..> Show
+Main ..> Update
+
+@enduml
